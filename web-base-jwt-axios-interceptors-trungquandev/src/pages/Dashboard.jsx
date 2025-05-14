@@ -9,6 +9,7 @@ import authorizedAxiosInstance from '~/utils/authorizedAxios'
 import { API_ROOT } from '~/utils/constants'
 import { Button } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
+import { handleLogoutAPI } from '~/apis'
 
 function Dashboard() {
   const [user, setUser] = useState(null)
@@ -22,15 +23,26 @@ function Dashboard() {
     fetchData()
   }, [])
 
-  const handleLogout =async ()=> {
-    // Case 1: Using localStorage
-    localStorage.removeItem('userInfo')
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const res = await authorizedAxiosInstance.get(`${API_ROOT}/v1/dashboards/access`)
+  //     setUser(res.data)
+  //   }
+  //   fetchData()
+  // }, [])
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const res = await authorizedAxiosInstance.get(`${API_ROOT}/v1/dashboards/access`)
+  //     setUser(res.data)
+  //   }
+  //   fetchData()
+  // }, [])
 
-    // Case 2: Using Http Only cookies => Call API to handle cookie removal
-    await authorizedAxiosInstance.delete(`${API_ROOT}/v1/users/logout`)
-    setUser(null)
+  const handleLogout = async () => {
+    await handleLogoutAPI()
+    // setUser(null)
+    // Nếu trường hợp dùng cookies, xoá userInfo trong localStorage
+    localStorage.removeItem('userInfo')
     navigate('/login')
   }
 

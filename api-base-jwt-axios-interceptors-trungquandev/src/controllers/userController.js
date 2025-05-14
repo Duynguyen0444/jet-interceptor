@@ -28,19 +28,21 @@ const login = async (req, res) => {
     // Create payload information to attach in the JWT token
     const userInfo = {
       id: MOCK_DATABASE.USER.ID,
-      email: MOCK_DATABASE.USER.EMAIL,
+      email: MOCK_DATABASE.USER.EMAIL
     }
 
     // Create access token + refresh token
     const accessToken = await JwtProvider.generateToken(
       userInfo,
       ACCESS_TOKEN_SECRET_SIGNATURE,
-      ms('1h')
+      // ms('1h')
+      5
     )
 
     const refreshToken = await JwtProvider.generateToken(
       userInfo,
       REFRESH_TOKEN_SECRET_SIGNATURE,
+      // 15,
       ms('14 days')
     )
 
@@ -57,7 +59,7 @@ const login = async (req, res) => {
       maxAge: ms('14 days')
     })
 
-    res.cookie(refreshToken, refreshToken, {
+    res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -88,17 +90,52 @@ const logout = async (req, res) => {
   }
 }
 
+
+// API Refresh Token - Tạo ra một accessToken mới cho client
 const refreshToken = async (req, res) => {
   try {
-    // Do something
-    res.status(StatusCodes.OK).json({ message: ' Refresh Token API success.' })
+    //  Cách 1: Lấy refreshToken có từ cookie đã đính kèm trong request
+    const refreshTokenFromCookie = req.cookies?.refreshToken
+
+    // Cách 2: Từ localStorage phía client gửi lên vào body khi gọi API
+    const refreshTokenFromBody = req.body?.refreshToken
+
+    // Verify xem refreshToken có hợp lệ hay không
+    const refreshTokenDecoded = await JwtProvider.verifyToken(
+      // refreshTokenFromCookie,
+      refreshTokenFromBody,
+      REFRESH_TOKEN_SECRET_SIGNATURE
+    )
+
+    const userInfo = {
+      id: refreshTokenDecoded.id,
+      email: refreshTokenDecoded.email
+    }
+    // Tạo lại accessToken mới cho người dùng
+    const accessToken = await JwtProvider.generateToken(
+      userInfo,
+      ACCESS_TOKEN_SECRET_SIGNATURE,
+      // ms('1h')
+      5
+    )
+
+    // Res lại cookie accessToken mới cho trường hợp sử dụng cookie
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('14 days')
+    })
+
+    // Trả về accessToken mới cho trường hợp FE cần update lại trong localStorage
+    res.status(StatusCodes.OK).json({ accessToken })
   } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Refresh token is invalid! Please login again' })
   }
 }
 
 export const userController = {
   login,
   logout,
-  refreshToken,
+  refreshToken
 }
